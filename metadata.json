@@ -1,0 +1,6 @@
+{
+  "name": "AutoLens AI",
+  "description": "Smart automotive AI assistant for identifying vehicles, colors, and detailed specs from photos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
