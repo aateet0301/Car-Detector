@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.ApiKeyManager
 import com.example.data.CarAnalyzerRepository
 import com.example.data.local.CarScanEntity
 import com.example.model.CarDataRepository
@@ -20,19 +21,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+sealed interface UiState {
+    data object Idle : UiState
+    data object Analyzing : UiState
+    data class Success(val result: CarIdentificationResult) : UiState
+    data class Error(val message: String) : UiState
+}
+
 data class ApiKeyInfo(
     val hasKey: Boolean,
     val maskedKey: String,
     val isCustom: Boolean,
     val customKey: String
 )
-
-sealed interface UiState {
-    object Idle : UiState
-    object Analyzing : UiState
-    data class Success(val result: CarIdentificationResult) : UiState
-    data class Error(val message: String) : UiState
-}
 
 enum class AppScreen {
     SCANNER,
@@ -64,7 +65,7 @@ class CarViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedBitmap = MutableStateFlow<Bitmap?>(null)
     val selectedBitmap: StateFlow<Bitmap?> = _selectedBitmap.asStateFlow()
 
-    private val _selectedSampleCar = MutableStateFlow<SampleCar?>(CarDataRepository.sampleRealCars.firstOrNull())
+    private val _selectedSampleCar = MutableStateFlow<SampleCar?>(null)
     val selectedSampleCar: StateFlow<SampleCar?> = _selectedSampleCar.asStateFlow()
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -90,6 +91,31 @@ class CarViewModel(application: Application) : AndroidViewModel(application) {
         // Re-analyze if an image is currently selected
         if (_selectedUri.value != null || _selectedBitmap.value != null || _selectedSampleCar.value != null) {
             analyzeCurrentVehicle()
+        }
+    }
+
+    suspend fun testApiKey(key: String): Pair<Boolean, String> {
+        return repository.testApiKey(key)
+    }
+
+    fun overrideModel(targetModelName: String) {
+        val currentState = _uiState.value
+        if (currentState is UiState.Success) {
+            viewModelScope.launch {
+                val updated = repository.overrideModel(
+                    currentResult = currentState.result,
+                    targetModelName = targetModelName,
+                    imageUri = _selectedUri.value?.toString()
+                )
+                _uiState.value = UiState.Success(updated)
+            }
+        }
+    }
+
+    fun dismissApiWarning() {
+        val currentState = _uiState.value
+        if (currentState is UiState.Success) {
+            _uiState.value = UiState.Success(currentState.result.copy(apiWarning = null))
         }
     }
 
@@ -136,7 +162,7 @@ class CarViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun analyzeCurrentVehicle() {
+    fun analyzeCurrentVehicle(preferredModel: String? = null) {
         val sample = _selectedSampleCar.value
         val uri = _selectedUri.value
         val bitmap = _selectedBitmap.value
@@ -151,7 +177,8 @@ class CarViewModel(application: Application) : AndroidViewModel(application) {
             val result = repository.analyzeCarImage(
                 bitmap = bitmap,
                 imageUri = uri,
-                sampleResId = sample?.imageRes
+                sampleResId = sample?.imageRes,
+                preferredModelOverride = preferredModel
             )
             result.onSuccess { identification ->
                 _uiState.value = UiState.Success(identification)
@@ -176,7 +203,7 @@ class CarViewModel(application: Application) : AndroidViewModel(application) {
     fun reset() {
         _selectedUri.value = null
         _selectedBitmap.value = null
-        _selectedSampleCar.value = CarDataRepository.sampleRealCars.firstOrNull()
+        _selectedSampleCar.value = null
         _uiState.value = UiState.Idle
     }
 }

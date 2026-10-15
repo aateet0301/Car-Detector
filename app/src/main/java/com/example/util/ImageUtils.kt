@@ -17,8 +17,13 @@ import java.io.InputStream
 object ImageUtils {
 
     fun createCameraTempUri(context: Context): Uri {
-        val cacheDir = context.cacheDir
-        val imageFile = File(cacheDir, "camera_capture_temp.jpg")
+        val baseDir = context.externalCacheDir
+            ?: context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+            ?: context.cacheDir
+        if (!baseDir.exists()) {
+            baseDir.mkdirs()
+        }
+        val imageFile = File(baseDir, "camera_capture_${System.currentTimeMillis()}.jpg")
         if (imageFile.exists()) {
             imageFile.delete()
         }

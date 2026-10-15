@@ -102,7 +102,9 @@ fun MainContent(viewModel: CarViewModel) {
                         onGetCameraUri = { viewModel.createCameraUri() },
                         onAnalyze = { viewModel.analyzeCurrentVehicle() },
                         onReset = { viewModel.reset() },
-                        onOpenApiKeyDialog = { showApiKeyDialog = true }
+                        onOpenApiKeyDialog = { showApiKeyDialog = true },
+                        onOverrideModel = { viewModel.overrideModel(it) },
+                        onDismissApiWarning = { viewModel.dismissApiWarning() }
                     )
                 }
                 AppScreen.SHOWCASE -> {
@@ -127,7 +129,8 @@ fun MainContent(viewModel: CarViewModel) {
                 ApiKeyDialog(
                     apiKeyInfo = apiKeyInfo,
                     onSaveKey = { viewModel.updateApiKey(it) },
-                    onDismiss = { showApiKeyDialog = false }
+                    onDismiss = { showApiKeyDialog = false },
+                    onTestKey = { viewModel.testApiKey(it) }
                 )
             }
         }

@@ -16,11 +16,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -32,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,18 +50,24 @@ import com.example.ui.theme.CarbonCard
 import com.example.ui.theme.CarbonCardBorder
 import com.example.ui.theme.CarbonDark
 import com.example.ui.theme.NeonGreen
+import com.example.ui.theme.RacingRed
 import com.example.ui.theme.SpeedBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 @Composable
 fun ApiKeyDialog(
     apiKeyInfo: ApiKeyInfo,
     onSaveKey: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTestKey: (suspend (String) -> Pair<Boolean, String>)? = null
 ) {
-    var keyInput by remember { mutableStateOf(apiKeyInfo.customKey.ifBlank { "AIzaSyC06wsO_dxSvSi17lY1uZ7swX4q2_ZYZVE" }) }
+    var keyInput by remember { mutableStateOf(apiKeyInfo.customKey) }
+    var isTesting by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -81,7 +91,7 @@ fun ApiKeyDialog(
                     )
                 }
                 Text(
-                    text = "Gemini API Key",
+                    text = "Gemini Vision API Key",
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = TextPrimary
                 )
@@ -110,12 +120,12 @@ fun ApiKeyDialog(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(if (apiKeyInfo.hasKey) NeonGreen else Color(0xFFFF5252))
+                                .background(if (apiKeyInfo.isCustom && apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300))
                         )
                         Text(
-                            text = if (apiKeyInfo.hasKey) "Status: Connected" else "Status: Key Missing",
+                            text = if (apiKeyInfo.isCustom) "Custom User Key Active" else "Default / Unconfigured",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = if (apiKeyInfo.hasKey) NeonGreen else Color(0xFFFF5252)
+                            color = if (apiKeyInfo.isCustom && apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300)
                         )
                     }
                     Text(
@@ -126,7 +136,7 @@ fun ApiKeyDialog(
                 }
 
                 Text(
-                    text = "Enter your Google Gemini API key to enable live camera and gallery car detection on your Redmi device:",
+                    text = "Provide your personal Google Gemini API key to run live multimodal vision on your photos (guarantees accurate recognition of all models):",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     lineHeight = 18.sp
@@ -134,8 +144,11 @@ fun ApiKeyDialog(
 
                 OutlinedTextField(
                     value = keyInput,
-                    onValueChange = { keyInput = it },
-                    label = { Text("Paste API Key") },
+                    onValueChange = {
+                        keyInput = it
+                        testResult = null
+                    },
+                    label = { Text("Paste Your Gemini API Key") },
                     placeholder = { Text("AIzaSy...") },
                     singleLine = true,
                     modifier = Modifier
@@ -151,17 +164,90 @@ fun ApiKeyDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
+                // Test Key Action Row
+                if (onTestKey != null && keyInput.isNotBlank()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    isTesting = true
+                                    testResult = onTestKey(keyInput)
+                                    isTesting = false
+                                }
+                            },
+                            enabled = !isTesting,
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, SpeedBlue.copy(alpha = 0.6f))
+                        ) {
+                            if (isTesting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = SpeedBlue
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Verifying...", fontSize = 12.sp)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = SpeedBlue
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Test Key Now", fontSize = 12.sp, color = SpeedBlue)
+                            }
+                        }
+
+                        if (testResult != null) {
+                            val (isValid, msg) = testResult!!
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.weight(1f, fill = false).padding(start = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isValid) Icons.Default.CheckCircle else Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = if (isValid) NeonGreen else RacingRed,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = if (isValid) "Key Verified!" else "Revoked/Invalid",
+                                    color = if (isValid) NeonGreen else RacingRed,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    if (testResult != null && !testResult!!.first) {
+                        Text(
+                            text = testResult!!.second,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = RacingRed,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
                 Text(
-                    text = "Get a free Gemini API key at aistudio.google.com/apikey",
+                    text = "Get a free key in 30 seconds at aistudio.google.com/app/apikey",
                     style = MaterialTheme.typography.labelSmall,
-                    color = SpeedBlue.copy(alpha = 0.8f)
+                    color = SpeedBlue.copy(alpha = 0.9f)
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSaveKey(keyInput)
+                    onSaveKey(keyInput.trim())
                     onDismiss()
                 },
                 modifier = Modifier.testTag("btn_save_api_key"),

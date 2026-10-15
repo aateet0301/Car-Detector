@@ -183,27 +183,7 @@ fun AutomotiveBottomNav(
                     contentDescription = "Scanner Tab"
                 )
             },
-            label = { Text("Scanner") },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = SpeedBlue,
-                selectedTextColor = SpeedBlue,
-                indicatorColor = Color(0xFF00375E),
-                unselectedIconColor = TextMuted,
-                unselectedTextColor = TextMuted
-            )
-        )
-
-        NavigationBarItem(
-            modifier = Modifier.testTag("nav_showcase"),
-            selected = currentScreen == AppScreen.SHOWCASE,
-            onClick = { onNavigate(AppScreen.SHOWCASE) },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.PhotoLibrary,
-                    contentDescription = "Real Cars Showcase"
-                )
-            },
-            label = { Text("Real Cars") },
+            label = { Text("Vehicle Scanner") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = SpeedBlue,
                 selectedTextColor = SpeedBlue,

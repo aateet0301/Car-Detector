@@ -9,11 +9,12 @@ class ApiKeyManager(context: Context) {
 
     companion object {
         private const val KEY_CUSTOM_API_KEY = "custom_gemini_api_key"
-        const val DEFAULT_FALLBACK_KEY = "AIzaSyC06wsO_dxSvSi17lY1uZ7swX4q2_ZYZVE"
+        // Known revoked/public keys that must not be used as live credentials
+        private const val REVOKED_KEY = "AIzaSyC06wsO_dxSvSi17lY1uZ7swX4q2_ZYZVE"
     }
 
     fun getCustomApiKey(): String {
-        return prefs.getString(KEY_CUSTOM_API_KEY, "") ?: ""
+        return prefs.getString(KEY_CUSTOM_API_KEY, "")?.trim() ?: ""
     }
 
     fun setCustomApiKey(key: String) {
@@ -29,11 +30,11 @@ class ApiKeyManager(context: Context) {
         if (customKey.isNotBlank()) {
             return customKey
         }
-        val buildKey = BuildConfig.GEMINI_API_KEY
-        if (buildKey.isNotBlank() && buildKey != "MY_GEMINI_API_KEY") {
+        val buildKey = BuildConfig.GEMINI_API_KEY.trim()
+        if (buildKey.isNotBlank() && buildKey != "MY_GEMINI_API_KEY" && buildKey != REVOKED_KEY) {
             return buildKey
         }
-        return DEFAULT_FALLBACK_KEY
+        return ""
     }
 
     fun hasValidApiKey(): Boolean {
