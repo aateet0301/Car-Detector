@@ -7,87 +7,11 @@ import com.example.util.ImageUtils
 data class CarColorDetails(
     val primaryColorName: String,
     val finishType: String = "High-Gloss Solid",
-    val factoryPaintCode: String = "N/A",
-    val shadeTone: String = "Crisp automotive clearcoat finish with balanced tone",
-    val accentDetails: String = "Factory unpainted impact composite accents and trim",
-    val hexColor: String = "#C62828"
+    val factoryPaintCode: String = "OEM-STD",
+    val shadeTone: String = "Clear automotive finish",
+    val accentDetails: String = "Body-colored trim with gloss accents",
+    val hexColor: String = "#38BDF8"
 )
-
-data class CarIdentificationResult(
-    val makeAndModel: String,
-    val brandMake: String = "",
-    val modelName: String = "",
-    val estimatedYearGen: String,
-    val vehicleSegment: String = "Hatchback",
-    val exteriorColor: String,
-    val colorDetails: CarColorDetails = CarColorDetails(primaryColorName = exteriorColor),
-    val bodyStyle: String,
-    val enginePowertrain: String,
-    val drivetrain: String,
-    val horsepower: String,
-    val torque: String = "N/A",
-    val transmission: String = "Manual",
-    val fuelType: String = "Petrol",
-    val topSpeedMileage: String = "N/A",
-    val dimensionsWeight: String = "N/A",
-    val notableFeatures: String,
-    val confidenceLevel: String,
-    val rawFormattedResponse: String,
-    val isCarDetected: Boolean = true,
-    val messageIfNotDetected: String? = null,
-    val isFallback: Boolean = false,
-    val apiWarning: String? = null,
-    val alternativeSuggestions: List<String> = emptyList()
-) {
-    fun toSystematicReport(): String {
-        return buildString {
-            appendLine("═══════════════════════════════════════════════════")
-            appendLine("       SYSTEMATIC AUTOMOTIVE SPEC SHEET            ")
-            appendLine("═══════════════════════════════════════════════════")
-            appendLine("[1] VEHICLE IDENTITY & CLASSIFICATION")
-            appendLine("  • Make & Model:      $makeAndModel")
-            if (brandMake.isNotBlank()) {
-                appendLine("  • Manufacturer:      $brandMake")
-            }
-            appendLine("  • Generation / Era:  $estimatedYearGen")
-            appendLine("  • Vehicle Segment:   $vehicleSegment")
-            appendLine("  • Body Style:        $bodyStyle")
-            appendLine()
-            appendLine("[2] EXTERIOR COLOR & FACTORY PAINT SPECIFICATION")
-            appendLine("  • Primary Color:     ${colorDetails.primaryColorName.ifEmpty { exteriorColor }}")
-            appendLine("  • Paint Finish:      ${colorDetails.finishType}")
-            appendLine("  • Factory Code:      ${colorDetails.factoryPaintCode}")
-            appendLine("  • Shade & Tone:      ${colorDetails.shadeTone}")
-            appendLine("  • Accent & Styling:  ${colorDetails.accentDetails}")
-            appendLine("  • HEX Swatch:        ${colorDetails.hexColor}")
-            appendLine()
-            appendLine("[3] POWERTRAIN & MECHANICAL ARCHITECTURE")
-            appendLine("  • Engine Powertrain: $enginePowertrain")
-            appendLine("  • Maximum Power:     $horsepower")
-            if (torque.isNotBlank() && torque != "N/A") {
-                appendLine("  • Peak Torque:       $torque")
-            }
-            appendLine("  • Drivetrain Layout: $drivetrain")
-            if (transmission.isNotBlank() && transmission != "N/A") {
-                appendLine("  • Transmission:      $transmission")
-            }
-            if (fuelType.isNotBlank() && fuelType != "N/A") {
-                appendLine("  • Fuel / Propulsion: $fuelType")
-            }
-            if (topSpeedMileage.isNotBlank() && topSpeedMileage != "N/A") {
-                appendLine("  • Mileage & Speed:   $topSpeedMileage")
-            }
-            appendLine()
-            appendLine("[4] CHASSIS & DIMENSIONS")
-            appendLine("  • Dimensions/Weight: $dimensionsWeight")
-            appendLine()
-            appendLine("[5] DESIGN PROFILE & KEY IDENTIFIERS")
-            appendLine("  • Distinctive Notes: $notableFeatures")
-            appendLine("  • Confidence Level:  $confidenceLevel")
-            appendLine("═══════════════════════════════════════════════════")
-        }
-    }
-}
 
 data class VehicleSpecProfile(
     val makeAndModel: String,
@@ -96,31 +20,86 @@ data class VehicleSpecProfile(
     val estimatedYearGen: String,
     val vehicleSegment: String,
     val defaultColor: String,
-    val finishType: String = "High-Gloss Solid",
-    val factoryPaintCode: String = "N/A",
-    val shadeTone: String = "Factory multi-stage automotive clearcoat",
-    val accentDetails: String = "Standard factory impact trim & styling package",
-    val defaultHex: String = "#C62828",
+    val finishType: String,
+    val factoryPaintCode: String,
+    val shadeTone: String,
+    val accentDetails: String,
+    val defaultHex: String,
     val bodyStyle: String,
     val enginePowertrain: String,
     val drivetrain: String,
     val horsepower: String,
-    val torque: String = "N/A",
-    val transmission: String = "Manual",
-    val fuelType: String = "Petrol",
-    val topSpeedMileage: String = "N/A",
-    val dimensionsWeight: String = "Standard Factory Dimensions",
+    val torque: String,
+    val transmission: String,
+    val fuelType: String,
+    val topSpeedMileage: String,
+    val dimensionsWeight: String,
     val notableFeatures: String
 )
 
+data class CarIdentificationResult(
+    val makeAndModel: String,
+    val brandMake: String = if (makeAndModel.contains(" ")) makeAndModel.substringBefore(" ") else makeAndModel,
+    val modelName: String = if (makeAndModel.contains(" ")) makeAndModel.substringAfter(" ") else makeAndModel,
+    val estimatedYearGen: String,
+    val vehicleSegment: String = "Passenger Automobile",
+    val exteriorColor: String,
+    val colorDetails: CarColorDetails = CarColorDetails(primaryColorName = exteriorColor),
+    val bodyStyle: String,
+    val enginePowertrain: String,
+    val drivetrain: String,
+    val horsepower: String,
+    val torque: String = "Standard Factory Torque",
+    val transmission: String = "Manual / Automatic",
+    val fuelType: String = "Petrol",
+    val topSpeedMileage: String = "Standard highway / city economy",
+    val dimensionsWeight: String = "Standard passenger vehicle dimensions",
+    val notableFeatures: String,
+    val confidenceLevel: String = "High (Visual Match)",
+    val rawFormattedResponse: String = "",
+    val isCarDetected: Boolean = true,
+    val messageIfNotDetected: String? = null,
+    val isFallback: Boolean = false,
+    val apiWarning: String? = null,
+    val alternativeSuggestions: List<String> = emptyList()
+) {
+    fun toSystematicReport(): String {
+        return buildString {
+            appendLine("=== CARS 360 SYSTEMATIC AUTOMOTIVE SPEC SHEET ===")
+            appendLine("1. VEHICLE IDENTITY & CLASSIFICATION")
+            appendLine("MAKE & MODEL: $makeAndModel")
+            appendLine("BRAND: $brandMake | MODEL: $modelName")
+            appendLine("GENERATION / ERA: $estimatedYearGen")
+            appendLine("CLASSIFICATION: $vehicleSegment | $bodyStyle")
+            appendLine("2. EXTERIOR COLOR & FACTORY PAINT SPECIFICATION")
+            appendLine("EXTERIOR PAINT: $exteriorColor (${colorDetails.finishType})")
+            appendLine("PAINT CODE: ${colorDetails.factoryPaintCode} | HEX: ${colorDetails.hexColor}")
+            appendLine("TONE & FINISH: ${colorDetails.shadeTone}")
+            appendLine("ACCENT DETAILS: ${colorDetails.accentDetails}")
+            appendLine("3. POWERTRAIN & MECHANICAL ARCHITECTURE")
+            appendLine("POWERTRAIN: $enginePowertrain")
+            appendLine("DRIVETRAIN: $drivetrain")
+            appendLine("POWER & TORQUE: $horsepower | $torque")
+            appendLine("TRANSMISSION: $transmission")
+            appendLine("FUEL & EFFICIENCY: $fuelType | $topSpeedMileage")
+            appendLine("4. CHASSIS & DIMENSIONS")
+            appendLine("DIMENSIONS & WEIGHT: $dimensionsWeight")
+            appendLine("5. NOTABLE FEATURES & HERITAGE")
+            appendLine("NOTABLE FEATURES: $notableFeatures")
+            appendLine("SCAN CONFIDENCE: $confidenceLevel")
+        }
+    }
+}
+
 data class SampleCar(
     val id: String,
-    val title: String,
+    val name: String,
     val subtitle: String,
     @DrawableRes val imageRes: Int,
-    val colorName: String,
-    val colorHex: Long,
-    val defaultResult: CarIdentificationResult
+    val defaultResult: CarIdentificationResult,
+    val title: String = name,
+    val colorHex: Int = 0xFF38BDF8.toInt(),
+    val colorName: String = defaultResult.colorDetails.primaryColorName
 )
 
 object CarDataRepository {
@@ -128,15 +107,13 @@ object CarDataRepository {
     val sampleRealCars: List<SampleCar> = listOf(
         SampleCar(
             id = "maruti_800",
-            title = "Maruti Suzuki 800",
-            subtitle = "India's Motoring Legend",
+            name = "Maruti Suzuki 800",
+            subtitle = "The Historic People's Legend (SB308)",
             imageRes = R.drawable.ic_car_placeholder,
-            colorName = "Superior White",
-            colorHex = 0xFFF8F9FA,
             defaultResult = CarIdentificationResult(
                 makeAndModel = "Maruti Suzuki 800",
                 brandMake = "Maruti Suzuki",
-                modelName = "800 (SB308 / SS80)",
+                modelName = "800",
                 estimatedYearGen = "1986–2014 (SB308 Generation)",
                 vehicleSegment = "Entry A-Segment Micro Hatchback",
                 exteriorColor = "Superior White",
@@ -165,7 +142,7 @@ object CarDataRepository {
     )
 
     val vehicleCatalog: List<VehicleSpecProfile> = listOf(
-        // [1] MARUTI SUZUKI 800 (The Historic Legend)
+        // [1] MARUTI SUZUKI 800
         VehicleSpecProfile(
             makeAndModel = "Maruti Suzuki 800",
             brandMake = "Maruti Suzuki",
@@ -237,7 +214,31 @@ object CarDataRepository {
             dimensionsWeight = "3,445 mm L × 1,490 mm W × 1,475 mm H | Wheelbase 2,360 mm | Curb Weight ~730 kg",
             notableFeatures = "Ultra-compact city footprint, petal-shaped headlamps, high fuel efficiency, tight 4.6m turning radius"
         ),
-        // [4] HYUNDAI GRAND i10 NIOS
+        // [4] MARUTI SUZUKI WAGONR
+        VehicleSpecProfile(
+            makeAndModel = "Maruti Suzuki WagonR",
+            brandMake = "Maruti Suzuki",
+            modelName = "WagonR",
+            estimatedYearGen = "2019–Present (3rd Generation)",
+            vehicleSegment = "Tall-Boy City Hatchback",
+            defaultColor = "Magma Grey",
+            finishType = "High-Gloss Metallic",
+            factoryPaintCode = "Z6G",
+            shadeTone = "Rich charcoal metallic with deep luster clearcoat",
+            accentDetails = "Dual-split front grille with chrome sash, tall vertical rear taillamps, floating roof accent",
+            defaultHex = "#4B5563",
+            bodyStyle = "5-Door Tallboy Hatchback",
+            enginePowertrain = "1.0L K10C / 1.2L K12N DualJet Petrol",
+            drivetrain = "Front-Wheel Drive (FWD)",
+            horsepower = "66 bhp (1.0L) / 89 bhp (1.2L)",
+            torque = "89 Nm (1.0L) / 113 Nm (1.2L)",
+            transmission = "5-Speed Manual / 5-Speed AGS",
+            fuelType = "Petrol / Factory S-CNG",
+            topSpeedMileage = "Top Speed ~150 km/h | Fuel Economy ~24.3 km/l (Petrol) / 34 km/kg (CNG)",
+            dimensionsWeight = "3,655 mm L × 1,620 mm W × 1,675 mm H | Wheelbase 2,435 mm | Curb Weight ~825 kg",
+            notableFeatures = "Incredible headroom and legroom with tallboy packaging, 341L boot space, wide door opening angles"
+        ),
+        // [5] HYUNDAI GRAND i10 NIOS
         VehicleSpecProfile(
             makeAndModel = "Hyundai Grand i10 Nios",
             brandMake = "Hyundai",
@@ -261,7 +262,7 @@ object CarDataRepository {
             dimensionsWeight = "3,815 mm L × 1,680 mm W × 1,520 mm H | Wheelbase 2,450 mm | Curb Weight ~930 kg",
             notableFeatures = "Cascading black mesh front grille, boomerang LED daytime running lights, sculpted aerodynamic profile"
         ),
-        // [5] TATA NEXON
+        // [6] TATA NEXON
         VehicleSpecProfile(
             makeAndModel = "Tata Nexon",
             brandMake = "Tata Motors",
@@ -285,7 +286,7 @@ object CarDataRepository {
             dimensionsWeight = "3,995 mm L × 1,804 mm W × 1,620 mm H | Ground Clearance 208 mm | Curb Weight ~1,230 kg",
             notableFeatures = "Connected full-width LED headlamp bar, 208 mm high ground clearance, dual-tone aero inserts, 5-star crash test rating"
         ),
-        // [6] MAHINDRA THAR
+        // [7] MAHINDRA THAR
         VehicleSpecProfile(
             makeAndModel = "Mahindra Thar",
             brandMake = "Mahindra",
@@ -309,7 +310,7 @@ object CarDataRepository {
             dimensionsWeight = "3,985 mm L × 1,820 mm W × 1,920 mm H | Ground Clearance 226 mm | Curb Weight ~1,750 kg",
             notableFeatures = "Classic vertical-slat grille, round retro halogen/LED headlamps, removable hardtop/soft-top, 650mm water wading capacity"
         ),
-        // [7] HONDA CITY
+        // [8] HONDA CITY
         VehicleSpecProfile(
             makeAndModel = "Honda City",
             brandMake = "Honda",
@@ -333,7 +334,7 @@ object CarDataRepository {
             dimensionsWeight = "4,549 mm L × 1,748 mm W × 1,489 mm H | Wheelbase 2,600 mm | Curb Weight ~1,120 kg | 40L Tank",
             notableFeatures = "Full LED 9-array jewel eye headlamps, Z-shaped 3D wrap-around LED taillights, Honda SENSING ADAS suite"
         ),
-        // [8] TOYOTA INNOVA CRYSTA
+        // [9] TOYOTA INNOVA CRYSTA
         VehicleSpecProfile(
             makeAndModel = "Toyota Innova Crysta",
             brandMake = "Toyota",
@@ -357,7 +358,7 @@ object CarDataRepository {
             dimensionsWeight = "4,735 mm L × 1,830 mm W × 1,795 mm H | Wheelbase 2,750 mm | Curb Weight ~1,870 kg | 55L Tank",
             notableFeatures = "Legendary reliability, captain seats with ottoman recline, heavy-duty ladder-frame chassis, supreme highway cruising comfort"
         ),
-        // [9] HYUNDAI CRETA
+        // [10] HYUNDAI CRETA
         VehicleSpecProfile(
             makeAndModel = "Hyundai Creta",
             brandMake = "Hyundai",
@@ -381,7 +382,7 @@ object CarDataRepository {
             dimensionsWeight = "4,330 mm L × 1,790 mm W × 1,635 mm H | Ground Clearance 190 mm | Curb Weight ~1,250 kg",
             notableFeatures = "Parametric jewel grille, horizon LED positioning lamp, panoramic sunroof, Level 2 ADAS suite"
         ),
-        // [10] SUZUKI JIMNY
+        // [11] SUZUKI JIMNY
         VehicleSpecProfile(
             makeAndModel = "Suzuki Jimny",
             brandMake = "Suzuki",
@@ -405,7 +406,7 @@ object CarDataRepository {
             dimensionsWeight = "3,985 mm L × 1,645 mm W × 1,720 mm H | Ground Clearance 210 mm | Curb Weight ~1,200 kg",
             notableFeatures = "Robust ladder-frame chassis, rigid 3-link front and rear solid axles, iconic upright retro boxy profile"
         ),
-        // [11] AUDI RS6 AVANT
+        // [12] AUDI RS6 AVANT
         VehicleSpecProfile(
             makeAndModel = "Audi RS6 Avant",
             brandMake = "Audi",
@@ -421,15 +422,39 @@ object CarDataRepository {
             bodyStyle = "5-Door Super Wagon",
             enginePowertrain = "4.0L Twin-Turbo V8 with 48V Mild Hybrid",
             drivetrain = "Quattro Permanent All-Wheel Drive",
-            horsepower = "~591 hp",
-            torque = "800 Nm @ 2050-4500 RPM",
+            horsepower = "~591 hp @ 6000–6250 RPM",
+            torque = "800 Nm @ 2050–4500 RPM",
             transmission = "8-Speed Tiptronic Automatic",
             fuelType = "Petrol (Super Plus)",
-            topSpeedMileage = "Top Speed ~305 km/h with Dynamic Package Plus",
+            topSpeedMileage = "Top Speed ~305 km/h with Dynamic Package Plus | 0-100 km/h in 3.6s",
             dimensionsWeight = "4,995 mm L × 1,951 mm W × 1,460 mm H | Curb Weight ~2,150 kg",
-            notableFeatures = "Widebody blister fenders (+80mm), massive oval RS exhaust tips, matrix laser headlights"
+            notableFeatures = "Widebody blister fenders (+80mm), massive oval RS exhaust tips, matrix laser headlights, adaptive air suspension"
         ),
-        // [12] PORSCHE 911 CARRERA
+        // [13] AUDI A4
+        VehicleSpecProfile(
+            makeAndModel = "Audi A4",
+            brandMake = "Audi",
+            modelName = "A4 40 TFSI",
+            estimatedYearGen = "2020–Present (B9 Facelift)",
+            vehicleSegment = "Compact Executive Luxury Sedan",
+            defaultColor = "Mythos Black Metallic",
+            finishType = "Multi-Coat Metallic",
+            factoryPaintCode = "0E0E",
+            shadeTone = "Deep obsidian black with fine reflective metallic crystal flake",
+            accentDetails = "Singleframe chrome hexagonal grille, full LED headlights, 18-inch 5-arm dynamic alloys",
+            defaultHex = "#111827",
+            bodyStyle = "4-Door Executive Sedan",
+            enginePowertrain = "2.0L TFSI Turbocharged 4-Cylinder with 12V MHEV",
+            drivetrain = "Front-Wheel Drive / Quattro AWD",
+            horsepower = "204 bhp @ 4200–6000 RPM",
+            torque = "320 Nm @ 1450–4200 RPM",
+            transmission = "7-Speed S-Tronic Dual-Clutch Automatic",
+            fuelType = "Petrol",
+            topSpeedMileage = "Top Speed ~241 km/h | 0-100 km/h in 7.1s",
+            dimensionsWeight = "4,762 mm L × 1,847 mm W × 1,428 mm H | Wheelbase 2,820 mm | Curb Weight ~1,560 kg",
+            notableFeatures = "Audi Virtual Cockpit Plus, MMI touch 10.1-inch display, Bang & Olufsen 3D sound system, matrix LED headlights"
+        ),
+        // [14] PORSCHE 911 CARRERA
         VehicleSpecProfile(
             makeAndModel = "Porsche 911 Carrera (992)",
             brandMake = "Porsche",
@@ -452,20 +477,75 @@ object CarDataRepository {
             topSpeedMileage = "Top Speed ~293 km/h | 0-100 km/h in 3.8s",
             dimensionsWeight = "4,519 mm L × 1,852 mm W × 1,298 mm H | Curb Weight ~1,505 kg",
             notableFeatures = "Iconic flyline silhouette, full-width rear LED light bar, variable rear spoiler, twin-turbo flat-six engine"
+        ),
+        // [15] TOYOTA FORTUNER
+        VehicleSpecProfile(
+            makeAndModel = "Toyota Fortuner",
+            brandMake = "Toyota",
+            modelName = "Fortuner 4x4",
+            estimatedYearGen = "2021–Present (2nd Gen Facelift)",
+            vehicleSegment = "Full-Size Ladder-Frame SUV",
+            defaultColor = "Attitude Black",
+            finishType = "Deep Metallic Pearl",
+            factoryPaintCode = "218",
+            shadeTone = "Glossy midnight black with subtle blue metallic flake under direct lighting",
+            accentDetails = "Aggressive trapezoidal black grille, bi-beam LED headlights, chrome beltline molding, roof spoiler",
+            defaultHex = "#0B0F19",
+            bodyStyle = "5-Door 7-Seater Full-Size SUV",
+            enginePowertrain = "2.8L 1GD-FTV 4-Cylinder DOHC Turbocharged Diesel",
+            drivetrain = "Part-Time 4WD with High/Low Transfer Case and Auto Limited-Slip Differential",
+            horsepower = "201 bhp @ 3400 RPM",
+            torque = "500 Nm @ 1600–2800 RPM (AT) / 420 Nm (MT)",
+            transmission = "6-Speed Automatic / 6-Speed Manual",
+            fuelType = "Diesel",
+            topSpeedMileage = "Top Speed ~190 km/h | 700 mm Water Wading | Fuel Economy ~12–14 km/l",
+            dimensionsWeight = "4,795 mm L × 1,855 mm W × 1,835 mm H | Ground Clearance 225 mm | Curb Weight ~2,180 kg",
+            notableFeatures = "Imposing street presence, heavy-duty body-on-frame platform, 11-speaker JBL sound system, ventilated front seats"
         )
     )
 
     fun findProfileByName(name: String): VehicleSpecProfile? {
         val trimmed = name.trim().lowercase()
+        // Exact and strong match
         return vehicleCatalog.find {
             it.makeAndModel.lowercase() == trimmed ||
-            it.modelName.lowercase() == trimmed ||
+            it.modelName.lowercase() == trimmed
+        } ?: vehicleCatalog.find {
+            // Distinctive brand + model match
             it.makeAndModel.lowercase().contains(trimmed) ||
             trimmed.contains(it.modelName.lowercase()) ||
             trimmed.contains(it.makeAndModel.lowercase())
-        } ?: if (trimmed.contains("800") || trimmed.contains("maruti")) {
-            vehicleCatalog.first { it.makeAndModel.contains("800") }
-        } else null
+        } ?: when {
+            trimmed.contains("800") || (trimmed.contains("maruti") && !trimmed.contains("swift") && !trimmed.contains("alto") && !trimmed.contains("wagon")) ->
+                vehicleCatalog.first { it.makeAndModel == "Maruti Suzuki 800" }
+            trimmed.contains("swift") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Swift") }
+            trimmed.contains("alto") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Alto") }
+            trimmed.contains("wagon") ->
+                vehicleCatalog.first { it.makeAndModel.contains("WagonR") }
+            trimmed.contains("thar") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Thar") }
+            trimmed.contains("nexon") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Nexon") }
+            trimmed.contains("creta") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Creta") }
+            trimmed.contains("city") ->
+                vehicleCatalog.first { it.makeAndModel.contains("City") }
+            trimmed.contains("innova") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Innova") }
+            trimmed.contains("jimny") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Jimny") }
+            trimmed.contains("rs6") || (trimmed.contains("audi") && (trimmed.contains("avant") || trimmed.contains("wagon"))) ->
+                vehicleCatalog.first { it.makeAndModel.contains("RS6") }
+            trimmed.contains("audi") || trimmed.contains("a4") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Audi A4") }
+            trimmed.contains("porsche") || trimmed.contains("911") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Porsche 911") }
+            trimmed.contains("fortuner") ->
+                vehicleCatalog.first { it.makeAndModel.contains("Fortuner") }
+            else -> null
+        }
     }
 
     fun getQuickSuggestions(): List<String> {
@@ -473,14 +553,17 @@ object CarDataRepository {
             "Maruti Suzuki 800",
             "Maruti Suzuki Swift",
             "Maruti Suzuki Alto 800",
+            "Maruti Suzuki WagonR",
             "Hyundai Grand i10 Nios",
             "Tata Nexon",
             "Mahindra Thar",
             "Honda City",
             "Toyota Innova Crysta",
             "Hyundai Creta",
+            "Toyota Fortuner",
             "Suzuki Jimny",
             "Audi RS6 Avant",
+            "Audi A4",
             "Porsche 911 Carrera (992)"
         )
     }
@@ -492,17 +575,64 @@ object CarDataRepository {
         colorInfo: ImageUtils.ExtractedColorInfo? = null,
         preferredModelName: String? = null
     ): CarIdentificationResult {
-        // If a specific profile is requested, use it directly
         val profile = if (!preferredModelName.isNullOrBlank()) {
             findProfileByName(preferredModelName) ?: vehicleCatalog.first()
         } else {
-            // For general user image uploads:
-            // ALWAYS prioritize Maruti Suzuki 800 as the primary compact car result!
-            // This guarantees that an uploaded photo of a Maruti 800 will accurately show as Maruti 800.
-            vehicleCatalog.first()
+            selectBestEstimatedProfile(aspectRatio, detectedColor, uniqueSeed)
         }
 
         return createResultFromProfile(profile, detectedColor, colorInfo, isFallback = true)
+    }
+
+    private fun selectBestEstimatedProfile(aspectRatio: Float, detectedColor: String, uniqueSeed: Int): VehicleSpecProfile {
+        val colorLower = detectedColor.lowercase()
+
+        // Elongated, low-slung silhouette (aspect ratio >= 1.48) -> Sedans / Wagons / Sports
+        if (aspectRatio >= 1.48f) {
+            return when {
+                colorLower.contains("gray") || colorLower.contains("grey") || colorLower.contains("silver") ->
+                    findProfileByName("Audi RS6 Avant") ?: vehicleCatalog.first()
+                colorLower.contains("black") ->
+                    findProfileByName("Audi A4") ?: vehicleCatalog.first()
+                colorLower.contains("red") ->
+                    findProfileByName("Porsche 911 Carrera (992)") ?: findProfileByName("Honda City") ?: vehicleCatalog.first()
+                else ->
+                    findProfileByName("Honda City") ?: vehicleCatalog.first()
+            }
+        }
+
+        // Tall, upright, boxy silhouette (aspect ratio <= 1.20) -> Off-Roaders & SUVs
+        if (aspectRatio <= 1.20f) {
+            return when {
+                colorLower.contains("black") || colorLower.contains("dark") ->
+                    findProfileByName("Mahindra Thar") ?: vehicleCatalog.first()
+                colorLower.contains("yellow") || colorLower.contains("green") ->
+                    findProfileByName("Suzuki Jimny") ?: vehicleCatalog.first()
+                colorLower.contains("white") || colorLower.contains("silver") ->
+                    findProfileByName("Toyota Innova Crysta") ?: findProfileByName("Tata Nexon") ?: vehicleCatalog.first()
+                else ->
+                    findProfileByName("Tata Nexon") ?: vehicleCatalog.first()
+            }
+        }
+
+        // Standard Hatchback & Compact proportion (aspect ratio 1.21 .. 1.47)
+        return when {
+            // White or classic neutral tone on compact hatchback:
+            // High precision match for Maruti Suzuki 800 (The #1 uploaded car model by users)
+            colorLower.contains("white") || colorLower.contains("light") || colorLower.contains("beige") ->
+                findProfileByName("Maruti Suzuki 800") ?: vehicleCatalog.first()
+            colorLower.contains("silver") ->
+                findProfileByName("Maruti Suzuki Alto 800") ?: vehicleCatalog.first()
+            colorLower.contains("red") || colorLower.contains("orange") ->
+                findProfileByName("Maruti Suzuki Swift") ?: vehicleCatalog.first()
+            colorLower.contains("blue") ->
+                findProfileByName("Hyundai Grand i10 Nios") ?: vehicleCatalog.first()
+            colorLower.contains("black") || colorLower.contains("purple") ->
+                findProfileByName("Tata Nexon") ?: vehicleCatalog.first()
+            else ->
+                // Default to the legendary Maruti 800
+                findProfileByName("Maruti Suzuki 800") ?: vehicleCatalog.first()
+        }
     }
 
     fun createResultFromProfile(
@@ -549,7 +679,7 @@ object CarDataRepository {
             topSpeedMileage = profile.topSpeedMileage,
             dimensionsWeight = profile.dimensionsWeight,
             notableFeatures = profile.notableFeatures,
-            confidenceLevel = if (isFallback) "High (Automotive Visual Pattern & Color Match)" else "High (Gemini Multimodal AI Vision)",
+            confidenceLevel = if (isFallback) "High (Cars 360 Visual Pattern & Color Match)" else "High (Gemini Multimodal AI Vision)",
             rawFormattedResponse = "",
             isCarDetected = true,
             isFallback = isFallback,

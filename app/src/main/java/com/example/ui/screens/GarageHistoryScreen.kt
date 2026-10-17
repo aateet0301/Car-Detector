@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.local.CarScanEntity
 import com.example.model.CarIdentificationResult
 import com.example.ui.components.CarResultView
@@ -91,17 +92,35 @@ fun GarageHistoryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Vehicle Garage",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${scanHistory.size} vehicle${if (scanHistory.size == 1) "" else "s"} identified",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF071B2C)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_cars360_logo),
+                            contentDescription = "Cars 360",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Cars 360 Garage",
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "${scanHistory.size} vehicle${if (scanHistory.size == 1) "" else "s"} scanned & saved",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
                 }
 
                 if (scanHistory.isNotEmpty()) {
@@ -138,14 +157,14 @@ fun GarageHistoryScreen(
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(CarbonDark),
+                                .background(Color(0xFF071B2C))
+                                .border(1.dp, SpeedBlue.copy(alpha = 0.4f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Garage,
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_cars360_logo),
                                 contentDescription = null,
-                                tint = SpeedBlue,
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(48.dp)
                             )
                         }
                         Text(
@@ -154,7 +173,7 @@ fun GarageHistoryScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "Identify cars using the scanner or explore the real car showcase to build your garage history.",
+                            text = "Scan any car with the camera or gallery to identify full specifications and save vehicles to your garage.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center

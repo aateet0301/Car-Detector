@@ -19,7 +19,7 @@ class ExampleRobolectricTest {
   fun `read string from context`() {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val appName = context.getString(R.string.app_name)
-    assertEquals("AutoLens AI", appName)
+    assertEquals("Cars 360", appName)
   }
 
   @Test
@@ -77,5 +77,29 @@ class ExampleRobolectricTest {
     val uri = com.example.util.ImageUtils.createCameraTempUri(context)
     assertNotNull(uri)
     assertTrue(uri.toString().startsWith("content://"))
+    // Test permission granting doesn't throw
+    com.example.util.ImageUtils.grantCameraUriPermissions(context, uri)
+  }
+
+  @Test
+  fun testApiKeyManagerCustomKeyAndSanitization() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val manager = com.example.data.ApiKeyManager(context)
+    manager.setCustomApiKey("  \"AIzaSyNewValidApiKeyTest123\"  ")
+    assertEquals("AIzaSyNewValidApiKeyTest123", manager.getCustomApiKey())
+    assertEquals("AIzaSyNewValidApiKeyTest123", manager.getEffectiveApiKey())
+    assertTrue(manager.hasValidApiKey())
+    manager.clearCustomApiKey()
+  }
+
+  @Test
+  fun testApiKeyManagerNonAizaKey() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val manager = com.example.data.ApiKeyManager(context)
+    manager.setCustomApiKey("  \"sk-proj-user-custom-vision-key-12345\"  ")
+    assertEquals("sk-proj-user-custom-vision-key-12345", manager.getCustomApiKey())
+    assertEquals("sk-proj-user-custom-vision-key-12345", manager.getEffectiveApiKey())
+    assertTrue(manager.hasValidApiKey())
+    manager.clearCustomApiKey()
   }
 }

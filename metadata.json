@@ -1,6 +1,6 @@
 {
-  "name": "AutoLens AI",
-  "description": "Smart automotive AI assistant for identifying vehicles, colors, and detailed specs from photos.",
+  "name": "Cars 360",
+  "description": "Cars 360 - Complete 360° vehicle scanner, smart AI identification, paint finish analysis, and technical specifications for all cars.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

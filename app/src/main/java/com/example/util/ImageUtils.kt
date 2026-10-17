@@ -17,22 +17,75 @@ import java.io.InputStream
 object ImageUtils {
 
     fun createCameraTempUri(context: Context): Uri {
-        val baseDir = context.externalCacheDir
-            ?: context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
-            ?: context.cacheDir
-        if (!baseDir.exists()) {
-            baseDir.mkdirs()
+        val baseDir = try {
+            val ext = context.externalCacheDir
+            if (ext != null && (ext.exists() || ext.mkdirs())) ext
+            else {
+                val pics = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+                if (pics != null && (pics.exists() || pics.mkdirs())) pics
+                else context.cacheDir
+            }
+        } catch (_: Exception) {
+            context.cacheDir
         }
+
         val imageFile = File(baseDir, "camera_capture_${System.currentTimeMillis()}.jpg")
-        if (imageFile.exists()) {
-            imageFile.delete()
+        try {
+            if (imageFile.exists()) {
+                imageFile.delete()
+            }
+            imageFile.createNewFile()
+            imageFile.setReadable(true, false)
+            imageFile.setWritable(true, false)
+        } catch (_: Exception) {
+            // Safe ignore
         }
-        imageFile.createNewFile()
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            imageFile
-        )
+
+        return try {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                imageFile
+            )
+        } catch (e: Exception) {
+            // Absolute fallback to internal cache
+            val fallbackFile = File(context.cacheDir, "camera_capture_fallback.jpg")
+            try {
+                if (fallbackFile.exists()) fallbackFile.delete()
+                fallbackFile.createNewFile()
+                fallbackFile.setReadable(true, false)
+                fallbackFile.setWritable(true, false)
+            } catch (_: Exception) {}
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                fallbackFile
+            )
+        }
+    }
+
+    /**
+     * Explicitly grants URI write & read permissions to all camera application packages.
+     * Essential for Samsung Knox, Xiaomi MIUI/HyperOS, and older OEM skins.
+     */
+    fun grantCameraUriPermissions(context: Context, uri: Uri) {
+        try {
+            val cameraIntent = android.content.Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+            val activities = context.packageManager.queryIntentActivities(
+                cameraIntent,
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+            )
+            for (resolveInfo in activities) {
+                val pkg = resolveInfo.activityInfo.packageName
+                context.grantUriPermission(
+                    pkg,
+                    uri,
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+        } catch (_: Exception) {
+            // Safe ignore if package querying is restricted
+        }
     }
 
     /**

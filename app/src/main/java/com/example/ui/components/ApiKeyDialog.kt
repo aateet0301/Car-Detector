@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,8 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.AlertDialog
@@ -41,10 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.ApiKeyInfo
 import com.example.ui.theme.CarbonCard
 import com.example.ui.theme.CarbonCardBorder
@@ -68,6 +72,7 @@ fun ApiKeyDialog(
     var isTesting by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     val scope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -78,23 +83,29 @@ fun ApiKeyDialog(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF00375E)),
+                        .background(Color(0xFF071B2C)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.VpnKey,
-                        contentDescription = null,
-                        tint = SpeedBlue,
-                        modifier = Modifier.size(20.dp)
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_cars360_logo),
+                        contentDescription = "Cars 360",
+                        modifier = Modifier.size(30.dp)
                     )
                 }
-                Text(
-                    text = "Gemini Vision API Key",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
-                )
+                Column {
+                    Text(
+                        text = "Automotive AI Vision Key",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Universal Multimodal Vision (All Key Formats)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SpeedBlue
+                    )
+                }
             }
         },
         text = {
@@ -120,12 +131,12 @@ fun ApiKeyDialog(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(if (apiKeyInfo.isCustom && apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300))
+                                .background(if (apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300))
                         )
                         Text(
-                            text = if (apiKeyInfo.isCustom) "Custom User Key Active" else "Default / Unconfigured",
+                            text = if (apiKeyInfo.hasKey) "Active API Key Configured" else "Using Smart On-Device Mode",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = if (apiKeyInfo.isCustom && apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300)
+                            color = if (apiKeyInfo.hasKey) NeonGreen else Color(0xFFFFB300)
                         )
                     }
                     Text(
@@ -136,33 +147,56 @@ fun ApiKeyDialog(
                 }
 
                 Text(
-                    text = "Provide your personal Google Gemini API key to run live multimodal vision on your photos (guarantees accurate recognition of all models):",
+                    text = "Paste your API key below for vehicle scanning and specifications. All key types are supported (Google Gemini, OpenAI sk-..., Groq gsk_..., or any custom provider):",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     lineHeight = 18.sp
                 )
 
-                OutlinedTextField(
-                    value = keyInput,
-                    onValueChange = {
-                        keyInput = it
-                        testResult = null
-                    },
-                    label = { Text("Paste Your Gemini API Key") },
-                    placeholder = { Text("AIzaSy...") },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("input_api_key"),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SpeedBlue,
-                        unfocusedBorderColor = CarbonCardBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedLabelColor = SpeedBlue
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                // Input field + Paste button row
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = {
+                            keyInput = it
+                            testResult = null
+                        },
+                        label = { Text("API Key") },
+                        placeholder = { Text("Paste your API key here...") },
+                        singleLine = true,
+                        trailingIcon = {
+                            TextButton(
+                                onClick = {
+                                    val clipText = clipboardManager.getText()?.text?.trim()
+                                    if (!clipText.isNullOrBlank()) {
+                                        keyInput = clipText
+                                        testResult = null
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentPaste,
+                                    contentDescription = "Paste",
+                                    tint = SpeedBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Paste", color = SpeedBlue, fontSize = 12.sp)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_api_key"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SpeedBlue,
+                            unfocusedBorderColor = CarbonCardBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedLabelColor = SpeedBlue
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
 
                 // Test Key Action Row
                 if (onTestKey != null && keyInput.isNotBlank()) {
@@ -175,7 +209,7 @@ fun ApiKeyDialog(
                             onClick = {
                                 scope.launch {
                                     isTesting = true
-                                    testResult = onTestKey(keyInput)
+                                    testResult = onTestKey(keyInput.trim())
                                     isTesting = false
                                 }
                             },
@@ -190,7 +224,7 @@ fun ApiKeyDialog(
                                     color = SpeedBlue
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Verifying...", fontSize = 12.sp)
+                                Text("Testing...", fontSize = 12.sp)
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
@@ -204,11 +238,13 @@ fun ApiKeyDialog(
                         }
 
                         if (testResult != null) {
-                            val (isValid, msg) = testResult!!
+                            val (isValid, _) = testResult!!
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.weight(1f, fill = false).padding(start = 8.dp)
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .padding(start = 8.dp)
                             ) {
                                 Icon(
                                     imageVector = if (isValid) Icons.Default.CheckCircle else Icons.Default.Error,
@@ -217,7 +253,7 @@ fun ApiKeyDialog(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = if (isValid) "Key Verified!" else "Revoked/Invalid",
+                                    text = if (isValid) "Connected" else "Check Key",
                                     color = if (isValid) NeonGreen else RacingRed,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -226,11 +262,11 @@ fun ApiKeyDialog(
                         }
                     }
 
-                    if (testResult != null && !testResult!!.first) {
+                    if (testResult != null) {
                         Text(
                             text = testResult!!.second,
                             style = MaterialTheme.typography.bodySmall,
-                            color = RacingRed,
+                            color = if (testResult!!.first) NeonGreen else RacingRed,
                             fontSize = 11.sp,
                             lineHeight = 15.sp
                         )
@@ -238,9 +274,9 @@ fun ApiKeyDialog(
                 }
 
                 Text(
-                    text = "Get a free key in 30 seconds at aistudio.google.com/app/apikey",
+                    text = "Key is saved locally on device. Tap 'Save Key' to start identifying cars.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = SpeedBlue.copy(alpha = 0.9f)
+                    color = TextMuted
                 )
             }
         },

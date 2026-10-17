@@ -77,11 +77,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.model.CarDataRepository
 import com.example.model.CarIdentificationResult
 import com.example.ui.theme.AmberWarning
@@ -394,11 +396,18 @@ fun CarResultView(
                         "Maruti Suzuki 800",
                         "Maruti Suzuki Swift",
                         "Maruti Suzuki Alto 800",
+                        "Maruti Suzuki WagonR",
                         "Hyundai Grand i10 Nios",
                         "Tata Nexon",
                         "Mahindra Thar",
                         "Honda City",
-                        "Toyota Innova Crysta"
+                        "Toyota Innova Crysta",
+                        "Hyundai Creta",
+                        "Toyota Fortuner",
+                        "Suzuki Jimny",
+                        "Audi RS6 Avant",
+                        "Audi A4",
+                        "Porsche 911 Carrera (992)"
                     )
 
                     quickModels.forEach { modelName ->
@@ -446,25 +455,35 @@ fun CarResultView(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Systematic Header Strip
+                // Systematic Header Strip with Cars 360 Logo
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(SpeedBlue.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "SYSTEMATIC SPECIFICATION REPORT",
-                            color = SpeedBlue,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_cars360_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp)
                         )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(SpeedBlue.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "CARS 360 SPECIFICATION REPORT",
+                                color = SpeedBlue,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp
+                            )
+                        }
                     }
 
                     // Confidence Status

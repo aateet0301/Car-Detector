@@ -18,6 +18,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,11 +69,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.model.SampleCar
 import com.example.ui.UiState
 import com.example.ui.components.CarResultView
@@ -85,6 +88,7 @@ import com.example.ui.theme.SpeedBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.ImageUtils
 
 @Composable
 fun ScannerScreen(
@@ -108,7 +112,7 @@ fun ScannerScreen(
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
     var showPermissionDeniedDialog by remember { mutableStateOf(false) }
 
-    // Direct Bitmap Preview Capture (reliable fallback across all devices/emulators)
+    // Direct Bitmap Preview Capture (reliable fallback across all devices)
     val takePicturePreviewLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
@@ -121,47 +125,43 @@ fun ScannerScreen(
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && pendingCameraUri != null) {
-            onSelectUri(pendingCameraUri!!)
-        } else {
-            // If FileProvider capture did not return OK, gracefully try direct preview capture
+        val uri = pendingCameraUri
+        val hasData = if (uri != null) {
             try {
-                takePicturePreviewLauncher.launch(null)
-            } catch (_: Exception) {
-                // User may have backed out
-            }
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.available() > 0
+                } ?: false
+            } catch (_: Exception) { false }
+        } else false
+
+        if ((success || hasData) && uri != null) {
+            onSelectUri(uri)
         }
     }
 
     fun launchCameraInternal() {
+        var launched = false
         try {
-            val tempUri = onGetCameraUri()
-            pendingCameraUri = tempUri
-            takePictureLauncher.launch(tempUri)
-        } catch (e: ActivityNotFoundException) {
+            val uri = onGetCameraUri()
+            pendingCameraUri = uri
+            takePictureLauncher.launch(uri)
+            launched = true
+        } catch (_: ActivityNotFoundException) {
+            // Handled below
+        } catch (_: Exception) {
+            // Handled below
+        }
+
+        if (!launched) {
             try {
                 takePicturePreviewLauncher.launch(null)
-            } catch (_: Exception) {
-                Toast.makeText(
-                    context,
-                    "No camera application found. Please choose a photo from your Gallery.",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        } catch (e: Exception) {
-            try {
-                takePicturePreviewLauncher.launch(null)
-            } catch (_: Exception) {
-                Toast.makeText(
-                    context,
-                    "Could not launch camera: ${e.localizedMessage ?: "Unknown error"}. You can choose a photo from Gallery.",
-                    Toast.LENGTH_LONG
-                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "No camera application found on this device.", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // Camera runtime permission launcher
+    // Permission launcher for Camera
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -172,21 +172,17 @@ fun ScannerScreen(
         }
     }
 
-    fun handleCameraClick() {
-        val hasPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
-
-        if (hasPermission) {
+    fun onCameraClick() {
+        val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
             launchCameraInternal()
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
-    // Universal Android Gallery picker contract
-    val galleryPickerLauncher = rememberLauncherForActivityResult(
+    // Photo gallery picker
+    val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
@@ -194,474 +190,388 @@ fun ScannerScreen(
         }
     }
 
-    val hasImage = selectedUri != null || selectedBitmap != null
+    val hasSelectedImage = selectedUri != null || selectedBitmap != null || selectedSampleCar != null
+
+    if (showPermissionDeniedDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDeniedDialog = false },
+            title = { Text("Camera Permission Needed") },
+            text = { Text("Cars 360 requires camera access to take car photographs. You can also pick an image from your gallery.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPermissionDeniedDialog = false
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                ) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDeniedDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(bottom = 96.dp)
     ) {
-        // API Key Status Banner (optional notice)
-        if (!hasApiKey) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .testTag("api_key_banner"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2838)),
-                    border = BorderStroke(1.dp, AmberWarning.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(AmberWarning.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Key,
-                                contentDescription = "API Key",
-                                tint = AmberWarning,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Gemini Vision Multimodal API",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "On-device automotive spec engine active. Tap 'Set Key' to use your personal Gemini key.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        }
-                        Button(
-                            onClick = onOpenApiKeyDialog,
-                            modifier = Modifier.testTag("btn_banner_set_key"),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = SpeedBlue,
-                                contentColor = Color(0xFF002238)
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text("Set Key", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Camera Viewfinder / Preview Card
         item {
-            ViewfinderCard(
-                selectedUri = selectedUri,
-                selectedBitmap = selectedBitmap,
-                isAnalyzing = uiState is UiState.Analyzing
-            )
-        }
-
-        // Action Buttons Row: Camera, Gallery, Clear
-        item {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedButton(
-                    onClick = { handleCameraClick() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("btn_take_photo"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SpeedBlue),
-                    border = BorderStroke(1.dp, CarbonCardBorder)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = "Take Photo",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Camera", fontWeight = FontWeight.SemiBold)
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            galleryPickerLauncher.launch("image/*")
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Could not open Gallery: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("btn_pick_gallery"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SpeedBlue),
-                    border = BorderStroke(1.dp, CarbonCardBorder)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddPhotoAlternate,
-                        contentDescription = "Pick Photo",
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Upload Photo", fontWeight = FontWeight.SemiBold)
-                }
-
-                if (hasImage) {
-                    OutlinedButton(
-                        onClick = onReset,
+                // Optional API Key Connection Banner (Supports all key formats)
+                if (!hasApiKey) {
+                    Card(
                         modifier = Modifier
-                            .height(48.dp)
-                            .testTag("btn_reset_selection"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted),
-                        border = BorderStroke(1.dp, CarbonCardBorder)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Reset",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Primary Analyze CTA Button
-        item {
-            val isAnalyzing = uiState is UiState.Analyzing
-            Button(
-                onClick = onAnalyze,
-                enabled = !isAnalyzing && hasImage,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp)
-                    .testTag("btn_analyze_vehicle"),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SpeedBlue,
-                    contentColor = Color(0xFF002238),
-                    disabledContainerColor = SpeedBlue.copy(alpha = 0.35f),
-                    disabledContentColor = Color(0xFF002238).copy(alpha = 0.5f)
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
-            ) {
-                if (isAnalyzing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = Color(0xFF002238),
-                        strokeWidth = 2.5.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Analyzing Vehicle...",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (hasImage) "Identify Vehicle & Specifications" else "Upload a Car Photo to Identify",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        // Error message if any
-        if (uiState is UiState.Error) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .testTag("error_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = CarbonCard),
-                    border = BorderStroke(1.dp, RacingRed)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenApiKeyDialog)
+                            .testTag("banner_connect_latest_api_key"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF071D2F)),
+                        border = BorderStroke(1.dp, SpeedBlue.copy(alpha = 0.5f))
                     ) {
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Key,
+                                    contentDescription = null,
+                                    tint = SpeedBlue,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Connect Vision API Key",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Supports all key formats (Gemini, OpenAI sk-..., Groq, or custom)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SpeedBlue)
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = "Connect",
+                                    color = Color(0xFF002238),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Image Preview or Scanner Box
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 10f)
+                        .testTag("scanner_preview_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CarbonCard),
+                    border = BorderStroke(1.dp, CarbonCardBorder)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        when {
+                            selectedBitmap != null -> {
+                                Image(
+                                    bitmap = selectedBitmap.asImageBitmap(),
+                                    contentDescription = "Selected vehicle preview",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            selectedUri != null -> {
+                                AsyncImage(
+                                    model = selectedUri,
+                                    contentDescription = "Selected vehicle preview",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            selectedSampleCar != null -> {
+                                Image(
+                                    painter = painterResource(id = selectedSampleCar.imageRes),
+                                    contentDescription = selectedSampleCar.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            else -> {
+                                // Empty state waiting for capture or upload
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(68.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF0B2135))
+                                            .border(1.dp, SpeedBlue.copy(alpha = 0.4f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = R.drawable.ic_cars360_logo),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(52.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text(
+                                        text = "Scan or Upload Any Car",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Snap a photo with camera or choose from gallery to identify make, model, year, and specifications.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary,
+                                        lineHeight = 16.sp,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Scanning Laser Beam Animation when loading
+                        if (uiState is UiState.Analyzing) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "scan_laser")
+                            val laserProgress by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1500, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "laser_pos"
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .align(Alignment.TopCenter)
+                                    .offset(y = (laserProgress * 220).dp)
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                Color.Transparent,
+                                                SpeedBlue,
+                                                Color(0xFF00E5FF),
+                                                SpeedBlue,
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(CarbonDark.copy(alpha = 0.65f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = SpeedBlue,
+                                        strokeWidth = 3.dp,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Text(
+                                        text = "Cars 360 AI is analyzing vehicle...",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Matching body contours, headlights, and OEM paint",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Camera & Gallery Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { onCameraClick() },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("btn_take_photo"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SpeedBlue,
+                            contentColor = Color(0xFF002238)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Take Photo",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Camera", fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { pickImageLauncher.launch("image/*") },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("btn_pick_gallery"),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, SpeedBlue.copy(alpha = 0.7f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SpeedBlue)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AddPhotoAlternate,
+                            contentDescription = "Gallery",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Gallery", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Analyze Action Bar (when image is selected)
+                if (hasSelectedImage && uiState !is UiState.Analyzing) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = onAnalyze,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp)
+                                .testTag("btn_analyze_car"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF0284C7),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (uiState is UiState.Success) "Re-Scan Vehicle" else "Analyze Vehicle",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = onReset,
+                            modifier = Modifier
+                                .height(50.dp)
+                                .testTag("btn_reset_scanner"),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, CarbonCardBorder),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reset",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Error State Card
+                if (uiState is UiState.Error) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("scanner_error_card"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CarbonCard),
+                        border = BorderStroke(1.dp, RacingRed.copy(alpha = 0.6f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = "Error",
-                                tint = RacingRed
+                                tint = RacingRed,
+                                modifier = Modifier.size(24.dp)
                             )
-                            Text(
-                                text = (uiState as UiState.Error).message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Scan Notice",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = RacingRed
+                                )
+                                Text(
+                                    text = uiState.message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextPrimary,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Success Result Display — Systematic Specs WITH Prominent Car Image
+        // Systematic Results View with Scanned Car Photo & Specifications
         if (uiState is UiState.Success) {
             item {
                 CarResultView(
-                    result = (uiState as UiState.Success).result,
+                    result = uiState.result,
                     scannedUri = selectedUri,
                     scannedBitmap = selectedBitmap,
                     onOverrideModel = onOverrideModel,
                     onOpenApiKeyDialog = onOpenApiKeyDialog,
                     onDismissApiWarning = onDismissApiWarning,
                     onReset = onReset
-                )
-            }
-        }
-    }
-
-    // Permission Denied Explanation Dialog
-    if (showPermissionDeniedDialog) {
-        AlertDialog(
-            onDismissRequest = { showPermissionDeniedDialog = false },
-            title = {
-                Text(
-                    text = "Camera Permission Needed",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = "AutoLens AI needs camera access to take live photos of cars. You can grant camera permission, or simply upload photos from your Gallery.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    lineHeight = 20.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showPermissionDeniedDialog = false
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpeedBlue, contentColor = Color(0xFF002238))
-                ) {
-                    Text("Grant Permission", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showPermissionDeniedDialog = false
-                        galleryPickerLauncher.launch("image/*")
-                    }
-                ) {
-                    Text("Use Gallery Instead", color = SpeedBlue)
-                }
-            },
-            containerColor = CarbonCard
-        )
-    }
-}
-
-@Composable
-private fun ViewfinderCard(
-    selectedUri: Uri?,
-    selectedBitmap: Bitmap?,
-    isAnalyzing: Boolean
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .aspectRatio(16f / 10f)
-            .testTag("scanner_viewfinder"),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CarbonCard),
-        border = BorderStroke(1.5.dp, SpeedBlue.copy(alpha = 0.6f))
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                selectedBitmap != null -> {
-                    Image(
-                        bitmap = selectedBitmap.asImageBitmap(),
-                        contentDescription = "Selected photo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                selectedUri != null -> {
-                    AsyncImage(
-                        model = selectedUri,
-                        contentDescription = "Selected photo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                else -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(CarbonDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .clip(CircleShape)
-                                    .background(SpeedBlue.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DirectionsCar,
-                                    contentDescription = null,
-                                    tint = SpeedBlue,
-                                    modifier = Modifier.size(30.dp)
-                                )
-                            }
-                            Text(
-                                text = "Take or upload a car photo to scan",
-                                color = TextPrimary,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
-                            )
-                            Text(
-                                text = "Front, rear, or side view of any vehicle",
-                                color = TextMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // HUD Viewfinder Target Overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
-            ) {
-                // Top-Left corner bracket
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .size(24.dp)
-                        .border(
-                            BorderStroke(2.5.dp, SpeedBlue),
-                            RoundedCornerShape(topStart = 6.dp)
-                        )
-                )
-                // Top-Right corner bracket
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(24.dp)
-                        .border(
-                            BorderStroke(2.5.dp, SpeedBlue),
-                            RoundedCornerShape(topEnd = 6.dp)
-                        )
-                )
-                // Bottom-Left corner bracket
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .size(24.dp)
-                        .border(
-                            BorderStroke(2.5.dp, SpeedBlue),
-                            RoundedCornerShape(bottomStart = 6.dp)
-                        )
-                )
-                // Bottom-Right corner bracket
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(24.dp)
-                        .border(
-                            BorderStroke(2.5.dp, SpeedBlue),
-                            RoundedCornerShape(bottomEnd = 6.dp)
-                        )
-                )
-            }
-
-            // Vehicle Source Label Tag
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(14.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = when {
-                        selectedBitmap != null -> "Camera Capture"
-                        selectedUri != null -> "Uploaded Photo"
-                        else -> "Vehicle Detection Frame"
-                    },
-                    color = TextPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            // Futuristic Scanner Sweep Animation
-            if (isAnalyzing) {
-                val infiniteTransition = rememberInfiniteTransition(label = "scanner_sweep")
-                val scanOffset by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1400, easing = LinearEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "scanner_laser"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .align(Alignment.TopCenter)
-                        .offset(y = (scanOffset * 220).dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    SpeedBlue,
-                                    Color.White,
-                                    SpeedBlue,
-                                    Color.Transparent
-                                )
-                            )
-                        )
                 )
             }
         }

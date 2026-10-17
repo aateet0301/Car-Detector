@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Garage
 import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -37,9 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.ui.AppScreen
 import com.example.ui.theme.AmberWarning
 import com.example.ui.theme.CarbonCard
@@ -74,61 +75,50 @@ fun AutomotiveTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Branded Logo & App Name "Cars 360"
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF00375E)),
+                            .background(Color(0xFF071B2C))
+                            .border(1.dp, SpeedBlue.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = "AutoLens Logo",
-                            tint = SpeedBlue,
-                            modifier = Modifier.size(24.dp)
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_cars360_logo),
+                            contentDescription = "Cars 360 Logo",
+                            modifier = Modifier.size(34.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "AutoLens",
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(SpeedBlue)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "AI",
-                                    color = Color(0xFF002238),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
-                        }
                         Text(
-                            text = "Vehicle & Spec Identifier",
+                            text = "Cars 360",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Vehicle Scanner & Specs",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
                     }
                 }
 
-                // API Key / Model Selector Button
+                // API Key / Vision Settings Button
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(CarbonCard)
-                        .border(1.dp, if (hasApiKey) SpeedBlue.copy(alpha = 0.4f) else AmberWarning.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                        .border(
+                            1.dp,
+                            if (hasApiKey) SpeedBlue.copy(alpha = 0.4f) else AmberWarning.copy(alpha = 0.6f),
+                            RoundedCornerShape(20.dp)
+                        )
                         .clickable(onClick = onOpenApiKeyDialog)
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                         .testTag("btn_topbar_api_key")
@@ -139,20 +129,20 @@ fun AutomotiveTopBar(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .clip(CircleShape)
                                 .background(if (hasApiKey) NeonGreen else AmberWarning)
                         )
                         Icon(
                             imageVector = Icons.Default.Key,
-                            contentDescription = "API Key",
+                            contentDescription = null,
                             tint = if (hasApiKey) SpeedBlue else AmberWarning,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = if (hasApiKey) "Gemini Live" else "Set API Key",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = TextPrimary
+                            text = if (hasApiKey) "API Key" else "Add Key",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (hasApiKey) TextPrimary else AmberWarning
                         )
                     }
                 }
@@ -179,17 +169,23 @@ fun AutomotiveBottomNav(
             onClick = { onNavigate(AppScreen.SCANNER) },
             icon = {
                 Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Scanner Tab"
+                    imageVector = Icons.Default.DirectionsCar,
+                    contentDescription = "Scanner",
+                    modifier = Modifier.size(24.dp)
                 )
             },
-            label = { Text("Vehicle Scanner") },
+            label = {
+                Text(
+                    text = "Scanner",
+                    fontWeight = if (currentScreen == AppScreen.SCANNER) FontWeight.Bold else FontWeight.Normal
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = SpeedBlue,
                 selectedTextColor = SpeedBlue,
-                indicatorColor = Color(0xFF00375E),
                 unselectedIconColor = TextMuted,
-                unselectedTextColor = TextMuted
+                unselectedTextColor = TextMuted,
+                indicatorColor = CarbonCard
             )
         )
 
@@ -205,29 +201,40 @@ fun AutomotiveBottomNav(
                                 containerColor = SpeedBlue,
                                 contentColor = Color(0xFF002238)
                             ) {
-                                Text("$historyCount")
+                                Text(
+                                    text = historyCount.toString(),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                )
                             }
                         }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Garage,
-                            contentDescription = "Garage History"
+                            contentDescription = "My Garage",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 } else {
                     Icon(
                         imageVector = Icons.Default.Garage,
-                        contentDescription = "Garage History"
+                        contentDescription = "My Garage",
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             },
-            label = { Text("My Garage") },
+            label = {
+                Text(
+                    text = "My Garage",
+                    fontWeight = if (currentScreen == AppScreen.GARAGE) FontWeight.Bold else FontWeight.Normal
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = SpeedBlue,
                 selectedTextColor = SpeedBlue,
-                indicatorColor = Color(0xFF00375E),
                 unselectedIconColor = TextMuted,
-                unselectedTextColor = TextMuted
+                unselectedTextColor = TextMuted,
+                indicatorColor = CarbonCard
             )
         )
     }
