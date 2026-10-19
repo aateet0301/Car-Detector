@@ -455,7 +455,7 @@ fun CarResultView(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Systematic Header Strip with Cars 360 Logo
+                // Systematic Header Strip with AutoLens AI Logo
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,

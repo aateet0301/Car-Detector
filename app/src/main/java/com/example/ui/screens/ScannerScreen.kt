@@ -196,7 +196,7 @@ fun ScannerScreen(
         AlertDialog(
             onDismissRequest = { showPermissionDeniedDialog = false },
             title = { Text("Camera Permission Needed") },
-            text = { Text("Cars 360 requires camera access to take car photographs. You can also pick an image from your gallery.") },
+            text = { Text("AutoLens AI requires camera access to take car photographs. You can also pick an image from your gallery.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -439,7 +439,7 @@ fun ScannerScreen(
                                         modifier = Modifier.size(44.dp)
                                     )
                                     Text(
-                                        text = "Cars 360 AI is analyzing vehicle...",
+                                        text = "AutoLens AI is analyzing vehicle...",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                         color = TextPrimary
                                     )
@@ -602,7 +602,7 @@ fun ScannerScreen(
                             }
 
                             Text(
-                                text = "Cars 360 requires a photo of an automobile (car, SUV, sedan, hatchback, truck, or van) to process specifications and paint details.",
+                                text = "AutoLens AI requires a photo of an automobile (car, SUV, sedan, hatchback, truck, or van) to process specifications and paint details.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary,
                                 fontSize = 11.sp,

@@ -90,7 +90,7 @@ fun ApiKeyDialog(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_cars360_logo),
-                        contentDescription = "Cars 360",
+                        contentDescription = "AutoLens AI",
                         modifier = Modifier.size(30.dp)
                     )
                 }

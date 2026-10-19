@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Cars 360"
+rootProject.name = "AutoLens AI"
 
 include(":app")

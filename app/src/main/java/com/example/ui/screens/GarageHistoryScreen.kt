@@ -105,13 +105,13 @@ fun GarageHistoryScreen(
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_cars360_logo),
-                            contentDescription = "Cars 360",
+                            contentDescription = "AutoLens AI",
                             modifier = Modifier.size(28.dp)
                         )
                     }
                     Column {
                         Text(
-                            text = "Cars 360 Garage",
+                            text = "AutoLens AI Garage",
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                             color = TextPrimary
                         )

@@ -159,7 +159,7 @@ class CarAnalyzerRepository(private val context: Context) {
                 val base64Data = ImageUtils.bitmapToBase64Jpeg(resolvedBitmap, quality = 85)
 
                 val systemInstructionText = """
-You are Cars 360 AI Automotive Vision Specialist.
+You are AutoLens AI Automotive Vision Specialist.
 
 MANDATORY AUTOMOTIVE VERIFICATION:
 Inspect this image carefully before analyzing. Does this image clearly depict a car, automobile, truck, SUV, van, coupe, sedan, hatchback, or motor vehicle?
@@ -291,7 +291,7 @@ Output your findings in this systematic structure:
                 return@withContext Result.failure(InvalidCarImageException())
             }
 
-            // High Precision Cars 360 On-Device Automotive Engine
+            // High Precision AutoLens AI On-Device Automotive Engine
             // Matches body silhouette, aspect ratio, and extracted factory paint color
             val accurateResult = CarDataRepository.createEstimatedIdentification(
                 detectedColor = colorInfo.colorName,
@@ -661,7 +661,7 @@ Output your findings in this systematic structure:
         }
 
         val confidence = extractPattern("Confidence Level").ifEmpty {
-            extractPattern("Confidence").ifEmpty { "High (Cars 360 AI Multimodal Vision)" }
+            extractPattern("Confidence").ifEmpty { "High (AutoLens AI Multimodal Vision)" }
         }
 
         val colorDetails = CarColorDetails(

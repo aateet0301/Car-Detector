@@ -75,7 +75,7 @@ fun AutomotiveTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Branded Logo & App Name "Cars 360"
+                // Branded Logo & App Name "AutoLens AI"
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
@@ -87,14 +87,14 @@ fun AutomotiveTopBar(
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.ic_cars360_logo),
-                            contentDescription = "Cars 360 Logo",
+                            contentDescription = "AutoLens AI Logo",
                             modifier = Modifier.size(34.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Cars 360",
+                            text = "AutoLens AI",
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.5.sp

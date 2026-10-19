@@ -679,7 +679,7 @@ object CarDataRepository {
             topSpeedMileage = profile.topSpeedMileage,
             dimensionsWeight = profile.dimensionsWeight,
             notableFeatures = profile.notableFeatures,
-            confidenceLevel = if (isFallback) "High (Cars 360 Visual Pattern & Color Match)" else "High (Gemini Multimodal AI Vision)",
+            confidenceLevel = if (isFallback) "High (AutoLens AI Visual Pattern & Color Match)" else "High (Gemini Multimodal AI Vision)",
             rawFormattedResponse = "",
             isCarDetected = true,
             isFallback = isFallback,
