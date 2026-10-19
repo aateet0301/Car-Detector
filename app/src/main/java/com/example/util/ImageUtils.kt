@@ -428,4 +428,72 @@ object ImageUtils {
     fun extractDominantVehicleColor(bitmap: Bitmap): String {
         return extractVehicleColorDetails(bitmap).colorName
     }
+
+    /**
+     * Checks if the image is clearly not a car (e.g., human portrait/selfie, blank screen, document).
+     */
+    fun isLikelyNonCarImage(bitmap: Bitmap): Boolean {
+        return try {
+            val width = bitmap.width
+            val height = bitmap.height
+            if (width < 20 || height < 20) return true
+
+            val stepX = (width / 16).coerceAtLeast(1)
+            val stepY = (height / 16).coerceAtLeast(1)
+
+            var totalSamples = 0
+            var skinToneSamples = 0
+            var nearWhiteSamples = 0
+            var nearBlackSamples = 0
+            var totalR = 0L
+            val rValues = mutableListOf<Int>()
+
+            for (y in 0 until height step stepY) {
+                for (x in 0 until width step stepX) {
+                    val pixel = bitmap.getPixel(x, y)
+                    val r = Color.red(pixel)
+                    val g = Color.green(pixel)
+                    val b = Color.blue(pixel)
+
+                    totalR += r
+                    rValues.add(r)
+                    totalSamples++
+
+                    // Human skin tone heuristic: R > G > B, with typical skin chromaticity
+                    if (r > 95 && g > 40 && b > 20 && (r - g) > 15 && r > b) {
+                        skinToneSamples++
+                    }
+
+                    if (r > 245 && g > 245 && b > 245) {
+                        nearWhiteSamples++
+                    } else if (r < 15 && g < 15 && b < 15) {
+                        nearBlackSamples++
+                    }
+                }
+            }
+
+            if (totalSamples == 0) return false
+
+            // 1. Dominant human portrait / selfie: skin tone > 48% of sampled area
+            if (skinToneSamples.toFloat() / totalSamples > 0.48f) {
+                return true
+            }
+
+            // 2. Uniform blank image (92%+ pure white or 95%+ pure black)
+            if (nearWhiteSamples.toFloat() / totalSamples > 0.92f || nearBlackSamples.toFloat() / totalSamples > 0.95f) {
+                return true
+            }
+
+            // 3. Flat solid background (variance of color channel < 36, std dev < 6)
+            val meanR = totalR.toDouble() / totalSamples
+            val varianceR = rValues.map { (it - meanR) * (it - meanR) }.average()
+            if (varianceR < 36.0) {
+                return true
+            }
+
+            false
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

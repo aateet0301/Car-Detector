@@ -294,9 +294,37 @@ fun ScannerScreen(
                         .testTag("scanner_preview_card"),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = CarbonCard),
-                    border = BorderStroke(1.dp, CarbonCardBorder)
+                    border = BorderStroke(1.2.dp, if (uiState is UiState.Error) RacingRed.copy(alpha = 0.85f) else CarbonCardBorder)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        if (uiState is UiState.Error && hasSelectedImage) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(10.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(RacingRed.copy(alpha = 0.95f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "Non-Car Image",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
                         when {
                             selectedBitmap != null -> {
                                 Image(
@@ -521,39 +549,107 @@ fun ScannerScreen(
                     }
                 }
 
-                // Error State Card
+                // Invalid Image / Error State Card
                 if (uiState is UiState.Error) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("scanner_error_card"),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = CarbonCard),
-                        border = BorderStroke(1.dp, RacingRed.copy(alpha = 0.6f))
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1014)),
+                        border = BorderStroke(1.5.dp, RacingRed.copy(alpha = 0.85f))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "Error",
-                                tint = RacingRed,
-                                modifier = Modifier.size(24.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(RacingRed.copy(alpha = 0.18f))
+                                        .border(1.2.dp, RacingRed, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Invalid Image",
+                                        tint = RacingRed,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Invalid Image",
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = RacingRed
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = uiState.message,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = TextPrimary,
+                                        fontSize = 13.sp,
+                                        lineHeight = 18.sp
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = "Cars 360 requires a photo of an automobile (car, SUV, sedan, hatchback, truck, or van) to process specifications and paint details.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp
                             )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Scan Notice",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = RacingRed
-                                )
-                                Text(
-                                    text = uiState.message,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextPrimary,
-                                    fontSize = 11.sp
-                                )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Button(
+                                    onClick = { onCameraClick() },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = SpeedBlue,
+                                        contentColor = Color(0xFF002238)
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CameraAlt,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Snap Car", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { pickImageLauncher.launch("image/*") },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SpeedBlue),
+                                    border = BorderStroke(1.dp, SpeedBlue.copy(alpha = 0.7f)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AddPhotoAlternate,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Upload Car", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }

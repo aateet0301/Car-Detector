@@ -23,7 +23,26 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
+class InvalidCarImageException(
+    message: String = "Invalid image: Please provide a car image. Unable to process."
+) : IllegalArgumentException(message)
+
 class CarAnalyzerRepository(private val context: Context) {
+
+    private fun isNotCarResponse(rawText: String): Boolean {
+        val trimmed = rawText.trim()
+        return trimmed.startsWith("INVALID_IMAGE_NOT_A_CAR", ignoreCase = true) ||
+            trimmed.startsWith("NOT_A_CAR", ignoreCase = true) ||
+            trimmed.contains("INVALID_IMAGE_NOT_A_CAR", ignoreCase = true) ||
+            trimmed.contains("NOT_A_CAR:", ignoreCase = true) ||
+            trimmed.contains("does not depict a car", ignoreCase = true) ||
+            trimmed.contains("does not contain a car", ignoreCase = true) ||
+            trimmed.contains("does not appear to be a car", ignoreCase = true) ||
+            trimmed.contains("not an automobile", ignoreCase = true) ||
+            trimmed.contains("no vehicle found", ignoreCase = true) ||
+            (trimmed.contains("not a car", ignoreCase = true) && !trimmed.contains("Make & Model", ignoreCase = true)) ||
+            (trimmed.contains("is not a vehicle", ignoreCase = true) && !trimmed.contains("Make & Model", ignoreCase = true))
+    }
 
     private val db = AppDatabase.getDatabase(context)
     private val dao = db.carScanDao()
@@ -141,7 +160,15 @@ class CarAnalyzerRepository(private val context: Context) {
 
                 val systemInstructionText = """
 You are Cars 360 AI Automotive Vision Specialist.
-Carefully examine this car image and identify the exact vehicle make, model, generation, exterior paint color, and technical specifications.
+
+MANDATORY AUTOMOTIVE VERIFICATION:
+Inspect this image carefully before analyzing. Does this image clearly depict a car, automobile, truck, SUV, van, coupe, sedan, hatchback, or motor vehicle?
+If the image does NOT depict an automobile or car (for example: a human person, selfie, face, pet or animal, food, nature landscape, building room, electronic device, furniture, document, or random non-vehicle object):
+You MUST immediately output:
+NOT_A_CAR: [Brief explanation of what the image actually shows]
+Do NOT provide car specifications, do NOT guess a car model, and do NOT output any car details for non-car images!
+
+If the image DOES depict an automobile:
 Output your findings in this systematic structure:
 
 **Make & Model:** [Exact vehicle brand and model, e.g., Maruti Suzuki 800, Maruti Suzuki Swift, Maruti Suzuki Alto, Hyundai Creta, Mahindra Thar, Tata Nexon, Honda City, Toyota Innova Crysta, Audi RS6 Avant, Porsche 911 Carrera, etc.]
@@ -167,7 +194,7 @@ Output your findings in this systematic structure:
 **Confidence Level:** [e.g., High - Distinctive Visual Verification]
                 """.trimIndent()
 
-                val requestPrompt = "Scan this vehicle photo. What is the exact make and model of this car? Provide its complete systematic specifications report."
+                val requestPrompt = "Scan this photo. Is this a car? If not a car, respond with NOT_A_CAR. If it is a car, identify the exact make and model with its complete systematic specifications report."
 
                 val request = GeminiRequest(
                     contents = listOf(
@@ -200,6 +227,9 @@ Output your findings in this systematic structure:
                         prompt = requestPrompt
                     )
                     if (!visionText.isNullOrBlank()) {
+                        if (isNotCarResponse(visionText)) {
+                            return@withContext Result.failure(InvalidCarImageException())
+                        }
                         val parsed = parseCarResponse(visionText, colorInfo)
                         saveScan(parsed, imageUri?.toString(), sampleResId)
                         return@withContext Result.success(parsed)
@@ -220,6 +250,9 @@ Output your findings in this systematic structure:
                         val response = GeminiApiClient.apiService.generateContent(model, effectiveApiKey, request)
                         val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
                         if (!text.isNullOrBlank()) {
+                            if (isNotCarResponse(text)) {
+                                return@withContext Result.failure(InvalidCarImageException())
+                            }
                             val parsed = parseCarResponse(text, colorInfo)
                             saveScan(parsed, imageUri?.toString(), sampleResId)
                             return@withContext Result.success(parsed)
@@ -253,6 +286,11 @@ Output your findings in this systematic structure:
                 }
             }
 
+            // On-Device validation: verify image contains vehicle structure before estimating
+            if (sampleResId == null && preferredModelOverride == null && ImageUtils.isLikelyNonCarImage(resolvedBitmap)) {
+                return@withContext Result.failure(InvalidCarImageException())
+            }
+
             // High Precision Cars 360 On-Device Automotive Engine
             // Matches body silhouette, aspect ratio, and extracted factory paint color
             val accurateResult = CarDataRepository.createEstimatedIdentification(
@@ -268,6 +306,21 @@ Output your findings in this systematic structure:
 
             saveScan(accurateResult, imageUri?.toString(), sampleResId)
             Result.success(accurateResult)
+        } catch (e: InvalidCarImageException) {
+            Result.failure(e)
+        } catch (e: IllegalArgumentException) {
+            if (e.message?.contains("Invalid image", ignoreCase = true) == true) {
+                Result.failure(e)
+            } else {
+                val safeResult = CarDataRepository.createEstimatedIdentification(
+                    detectedColor = "Superior White",
+                    aspectRatio = 1.35f,
+                    uniqueSeed = (imageUri?.hashCode() ?: 99),
+                    preferredModelName = "Maruti Suzuki 800"
+                ).copy(isFallback = true, apiWarning = null)
+                saveScan(safeResult, imageUri?.toString(), sampleResId)
+                Result.success(safeResult)
+            }
         } catch (_: Exception) {
             val safeResult = CarDataRepository.createEstimatedIdentification(
                 detectedColor = "Superior White",

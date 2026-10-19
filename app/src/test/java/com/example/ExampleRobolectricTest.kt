@@ -102,4 +102,18 @@ class ExampleRobolectricTest {
     assertTrue(manager.hasValidApiKey())
     manager.clearCustomApiKey()
   }
+
+  @Test
+  fun testNonCarImageDetectionBlankImage() {
+    val blankBitmap = android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888)
+    blankBitmap.eraseColor(android.graphics.Color.WHITE)
+    val isNonCar = com.example.util.ImageUtils.isLikelyNonCarImage(blankBitmap)
+    assertTrue("Pure blank image should be identified as non-car", isNonCar)
+  }
+
+  @Test
+  fun testInvalidCarImageExceptionMessage() {
+    val exception = com.example.data.InvalidCarImageException()
+    assertEquals("Invalid image: Please provide a car image. Unable to process.", exception.message)
+  }
 }
